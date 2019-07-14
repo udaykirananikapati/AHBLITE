@@ -1,0 +1,66 @@
+`include "ahb_package.sv"
+`include "uvm_macros.svh"
+`include "ahb_slave_interface.sv"
+`include "ahb_master_intf.sv"
+//`include "assertion.sv"
+`timescale 1ns/1ps
+
+module top;
+  
+  import ahb_package::*; 
+
+  bit HCLK,HRESETn;
+  
+  //AHB Clock frequency is 60MHZ = 16.66ns
+ // parameter CLK_PERIOD = 16.66;
+  
+  // Master Interface 
+  ahb_master_intf mvif(HCLK,HRESETn);
+  
+  // Slave Interface
+  ahb_slave_interface svif(HCLK,HRESETn);
+  
+  // Binding interface to assertion module
+//  bind top assertion assertion_intf(.mvif(mvif),.HRESETn(HRESETn));
+  
+  // mapping master interface and slave interface
+  assign svif.HADDR  = mvif.HADDR;
+  assign svif.HWDATA = mvif.HWDATA;
+  assign svif.HWRITE = mvif.HWRITE;
+  assign svif.HSIZE  = mvif.HSIZE;
+  assign svif.HBURST = mvif.HBURST;
+  assign svif.HPROT  = mvif.HPROT;
+  assign svif.HTRANS = mvif.HTRANS;
+  assign mvif.HREADY = svif.HREADY;
+  assign mvif.HRDATA = svif.HRDATA;
+  assign mvif.HRESP  = svif.HRESP;
+  
+  initial begin
+    // setting the master interface
+    uvm_config_db#(virtual ahb_master_intf)::set(null ,"*","mvif",mvif);  
+    // getting the slave interface
+    uvm_config_db#(virtual ahb_slave_interface)::set(null ,"*","svif",svif);
+    
+    `uvm_info("TOP","----Run test begin----",UVM_MEDIUM);
+    run_test("ahb_base_test");
+    `uvm_info("TOP","----Run test end----",UVM_MEDIUM);
+  end
+  
+  // Clock Generation
+  initial begin
+    HCLK = 1'b0;
+    forever #(CLK_PERIOD/2) HCLK = ~HCLK;
+  end
+  
+  // Reset Generation  
+  initial begin
+    HRESETn=1'b0;
+    #5 HRESETn = 1'b1;
+  end
+  
+  // Dump File Generation 
+  initial begin
+    $dumpfile("dump.vcd");
+    $dumpvars(0,top);
+  end   
+endmodule : top

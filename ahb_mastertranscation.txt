@@ -1,0 +1,62 @@
+class ahb_master_transaction extends uvm_sequence_item;
+  
+  // Declaring the variable
+  rand bit [HADDR_WIDTH-1:0]   HADDR;
+  rand bit [HWDATA_WIDTH-1:0]  HWDATA[];
+  rand     write_type_e        HWRITE;
+       bit [HRDATA_WIDTH-1:0]  HRDATA;    
+       bit                     HREADY;	 
+           resp_type_e         HRESP;  
+  rand     burst_type_e        HBURST;    
+  rand     size_type_e         HSIZE;  	 
+  rand bit [HPROT_WIDTH-1:0]   HPROT;  	 
+  rand     trans_type_e        HTRANS; 	 
+  rand bit 	                   HMASTLOCK; 
+  
+  // constraints
+  constraint addr_size {HADDR < SLAVE_MEM_SIZE;}
+  constraint hwdata_c { //HWDATA.size inside {[1:10]};
+                       //foreach(HWDATA[i]){HWDATA[i] != 0};
+                       (HBURST == SINGLE)-> HWDATA.size == 1;
+                       //(HBURST == INCR)  -> HWDATA.size inside {[6:10]};
+                       (HBURST == INCR)  -> HWDATA.size == 4;
+                       (HBURST == INCR4) -> HWDATA.size == 4;
+                       (HBURST == INCR8) -> HWDATA.size == 8;
+                       (HBURST == INCR16)-> HWDATA.size == 16;
+                       (HBURST == WRAP4) -> HWDATA.size == 4;
+                       (HBURST == WRAP8) -> HWDATA.size == 8;
+                       (HBURST == WRAP16)-> HWDATA.size == 16;
+                       solve HBURST before HWDATA;
+                      }
+  
+ // constraint hsize_c {HSIZE < WORDX2;}
+  
+  constraint protection_c {soft HPROT == 0;}
+  
+  constraint masterlock_c {soft HMASTLOCK == 0;}
+  
+  //constraint hsize_single {(HBURST == SINGLE) -> (HSIZE == BYTE);}
+  
+  constraint addr_boundary {
+    (HSIZE == HALFWORD && (HBURST == WRAP4 || HBURST == WRAP8 || HBURST == WRAP16)) -> (HADDR[0] == 1'b0);
+    (HSIZE == WORD && (HBURST == WRAP4 || HBURST == WRAP8 || HBURST == WRAP16)) -> (HADDR[1:0] == 2'b00);
+    solve HBURST before HADDR;
+  }
+  
+  `uvm_object_utils_begin(ahb_master_transaction)
+    `uvm_field_int(HADDR,UVM_ALL_ON)
+    `uvm_field_array_int(HWDATA,UVM_ALL_ON)
+    `uvm_field_enum(write_type_e,HWRITE,UVM_ALL_ON)
+    `uvm_field_enum(burst_type_e,HBURST,UVM_ALL_ON)
+    `uvm_field_enum(size_type_e,HSIZE,UVM_ALL_ON)
+    `uvm_field_int(HPROT,UVM_ALL_ON)
+    `uvm_field_enum(trans_type_e,HTRANS,UVM_ALL_ON)
+    `uvm_field_int(HMASTLOCK,UVM_ALL_ON)
+    `uvm_field_int(HRDATA,UVM_ALL_ON)
+  `uvm_object_utils_end
+ 
+  function new (string name = "ahb_master_transaction");
+    super.new(name);
+  endfunction : new 
+  
+endclass : ahb_master_transaction

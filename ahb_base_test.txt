@@ -1,0 +1,196 @@
+ class ahb_base_test extends uvm_test;
+
+  `uvm_component_utils(ahb_base_test)
+  
+  uvm_factory   factory;
+  ahb_top_env                      env;
+  ahb_env_config                   env_cfg;
+  ahb_api			               base_seq;
+  virtual ahb_slave_interface      svif;
+  virtual ahb_master_intf 	       mvif;
+  ahb_master_env_config            master_env_cfg;
+  ahb_active_master_agent_config   active_master_agent_cfg;
+  ahb_passive_master_agent_config  passive_master_agent_cfg;
+  ahb_slave_env_config             slave_env_cfg;
+  ahb_active_slave_agent_config    active_slave_agent_cfg;
+  ahb_passive_slave_agent_config   passive_slave_agent_cfg;
+  
+  
+  function new(string name, uvm_component parent);
+    super.new(name,parent);
+  endfunction : new 
+  
+  function void build_phase(uvm_phase phase); 
+    `uvm_info("TEST","build_phase_started",UVM_MEDIUM)
+    super.build_phase(phase);
+    env_cfg = ahb_env_config::type_id::create("env_cfg");
+    master_env_cfg = ahb_master_env_config::type_id::create("master_env_cfg");
+    slave_env_cfg = ahb_slave_env_config::type_id::create("slave_env_cfg");
+    master_config_ahb();
+    slave_config_ahb();
+    uvm_config_db #(ahb_env_config)::set(this,"*","ahb_env_config",env_cfg);
+    uvm_config_db #(ahb_master_env_config)::set(this,"*","ahb_master_env_config",master_env_cfg);
+    uvm_config_db #(ahb_slave_env_config)::set(this,"*","ahb_slave_env_config",slave_env_cfg);
+    env = ahb_top_env::type_id::create("env", this);
+    base_seq = ahb_api::type_id::create("base_seq");
+    //$display("seq name : %0s",ahb_sequence_q[0]);
+    //ahb_sequence_q[0] ahb_seq_inst;
+    //ahb_seq_inst = ahb_sequence_q[0]::type_id::create("ahb_seq_inst");
+    `uvm_info("TEST","build_phase_ended",UVM_MEDIUM);
+  endfunction : build_phase
+  
+  // master_config_ahb function
+  function void master_config_ahb();
+    active_master_agent_cfg = ahb_active_master_agent_config::type_id::create("active_master_agent_cfg"); 
+    
+    if(!uvm_config_db #(virtual ahb_master_intf)::get(this,"","mvif",active_master_agent_cfg.mvif))
+      `uvm_fatal("MVIF CONFIG","cannot get interface mvif m_cfg.mvif from config_db. Have you set the mvif?")
+    active_master_agent_cfg.is_active      = UVM_ACTIVE;
+    master_env_cfg.active_master_agent_cfg = active_master_agent_cfg;	
+    passive_master_agent_cfg = ahb_passive_master_agent_config::type_id::create("passive_master_agent_cfg");
+    
+    if(!uvm_config_db #(virtual ahb_master_intf)::get(this,"","mvif",passive_master_agent_cfg.mvif))
+      `uvm_fatal("MVIF CONFIG","cannot get interface mvif m_cfg.mvif from config_db. Have you set the mvif?")
+    passive_master_agent_cfg.is_active      = UVM_PASSIVE;
+    master_env_cfg.passive_master_agent_cfg = passive_master_agent_cfg;	
+  endfunction : master_config_ahb
+  
+  // slave_config_ahb function
+  function void slave_config_ahb();
+    active_slave_agent_cfg = ahb_active_slave_agent_config::type_id::create("active_slave_agent_cfg");
+    
+    if(!uvm_config_db #(virtual ahb_slave_interface)::get(this,"","svif",active_slave_agent_cfg.svif))
+      `uvm_fatal("SVIF CONFIG","cannot get interface svif m_cfg.svif from config_db. Have you set the svif?")  
+    active_slave_agent_cfg.is_active     = UVM_ACTIVE;
+	slave_env_cfg.active_slave_agent_cfg = active_slave_agent_cfg;	
+    passive_slave_agent_cfg = ahb_passive_slave_agent_config::type_id::create("passive_slave_agent_cfg");
+    
+    if(!uvm_config_db #(virtual ahb_slave_interface)::get(this,"","svif",passive_slave_agent_cfg.svif))
+      `uvm_fatal("SVIF CONFIG","cannot get interface svif m_cfg.svif from config_db. Have you set the svif?")
+    passive_slave_agent_cfg.is_active     = UVM_PASSIVE;
+    slave_env_cfg.passive_slave_agent_cfg = passive_slave_agent_cfg;	   
+  endfunction : slave_config_ahb
+  
+  virtual task run_phase(uvm_phase phase);
+    `uvm_info("TEST","run_phase_started",UVM_MEDIUM)
+    super.run_phase(phase);
+    phase.raise_objection(this);
+    //uvm_object tmp;
+    //string ahb_sequence_q[$];
+    //uvm_sequence#(uvm_sequence_item) run_seq;
+    //if(!(uvm_cmdline_proc.get_arg_values("+sequence=",ahb_sequence_q)))begin
+    //  `uvm_fatal(get_type_name(),"Required::::: SEQUENCE NAME NOT DEFINED ::::: not defined")
+    //end
+    //tmp  = factory.create_object_by_name(ahb_sequence_q[0],env.master_env.active_master_agent.seqr.get_full_name(),"run_seq");
+    //if(!$cast(run_seq,tmp))begin
+    //  `uvm_fatal(get_type_name(),$sformatf("CAST FAILED ---%0s is not a uvm_sequence",ahb_sequence_q[0]))
+    //end
+    //base_seq = ahb_api::type_id::create("base_seq");
+    base_seq.randomize();
+    base_seq.start(env.master_env.active_master_agent.seqr);
+    //ahb_wr_rd_seq.randomize();
+    //ahb_wr_rd_seq.start(env.master_env.active_master_agent.seqr);
+    //run_seq.set_sequencer(env.master_env.active_master_agent.seqr);
+    //if(!run_seq.randomize())begin
+    //  `uvm_fatal(get_type_name(),"Randomimzation failed for given seqeunce")
+    //end
+    //run_seq.start(env.master_env.active_master_agent.seqr);
+    //ahb_seq_inst.randomize();
+    //ahb_seq_inst.start(env.master_env.active_master_agent.seqr);
+    #100;
+    phase.drop_objection(this);
+    `uvm_info("TEST","run_phase_ended",UVM_MEDIUM)
+  endtask : run_phase
+  
+  function void end_of_elaboration_phase(uvm_phase phase);
+    `uvm_info("TEST","end_of_elaboration_phase_started ",UVM_MEDIUM);
+    super.end_of_elaboration_phase(phase);
+    uvm_top.print_topology();
+    `uvm_info("TEST","end_of_elaboration_phase_ended ",UVM_MEDIUM);    
+  endfunction : end_of_elaboration_phase
+  
+endclass : ahb_base_test
+
+////////////////////// test for basic WRITE/READ operation ////////////////////////
+class write_read_test  extends ahb_base_test;
+  
+  `uvm_component_utils(write_read_test)
+  
+  ahb_write_read_seq    wr_rd_seq;
+
+  function new(string name = "write_read_test", uvm_component parent = null);
+    super.new(name,parent);
+  endfunction : new 
+  
+  function void build_phase(uvm_phase phase); 
+    super.build_phase(phase);
+  endfunction : build_phase  
+   
+  virtual task run_phase(uvm_phase phase);
+    `uvm_info("AHB WRITE_READ TEST","write_read_test_started",UVM_MEDIUM);
+    phase.raise_objection(this);
+    wr_rd_seq = ahb_write_read_seq::type_id::create("wr_rd_seq");
+    wr_rd_seq.randomize() with {count==5;wr_rd ==0;};
+    wr_rd_seq.start(env.master_env.active_master_agent.seqr);
+    #100
+    phase.drop_objection(this);
+    `uvm_info("AHB WRITE_READ TEST","write_read_test_ended",UVM_MEDIUM);
+  endtask : run_phase
+  
+endclass : write_read_test 
+
+///////////////////////INCR test////////////////////////////////
+class incr_test  extends ahb_base_test;
+  
+  `uvm_component_utils(incr_test)
+  
+  incr    incr_seq;
+
+  function new(string name = "incr_test", uvm_component parent = null);
+    super.new(name,parent);
+  endfunction : new 
+  
+  function void build_phase(uvm_phase phase); 
+    super.build_phase(phase);
+  endfunction : build_phase  
+   
+  virtual task run_phase(uvm_phase phase);
+    `uvm_info("AHB INCR TEST","incr_test_started",UVM_MEDIUM);
+    phase.raise_objection(this);
+    incr_seq = incr::type_id::create("incr_seq");
+    incr_seq.randomize() with {count == 2;wr_rd == 2;};
+    incr_seq.start(env.master_env.active_master_agent.seqr);
+    #100
+    phase.drop_objection(this);
+    `uvm_info("AHB INCR TEST","incr_test_ended",UVM_MEDIUM);
+  endtask : run_phase
+  
+endclass : incr_test 
+
+/////////////////////////////WRAP test/////////////////////
+
+class wrap_test  extends ahb_base_test;
+  
+  `uvm_component_utils(wrap_test)
+  
+  wrap    wrap_seq;
+
+  function new(string name = "wrap_test", uvm_component parent = null);
+    super.new(name,parent);
+  endfunction : new 
+  
+  function void build_phase(uvm_phase phase); 
+    super.build_phase(phase);
+  endfunction : build_phase  
+   
+  virtual task run_phase(uvm_phase phase);
+    `uvm_info("AHB WRAP TEST","wrap_test_started",UVM_MEDIUM);
+    phase.raise_objection(this);
+    wrap_seq = wrap::type_id::create("wrap_seq");
+    wrap_seq.randomize() with {count == 2;wr_rd == 2;};
+    wrap_seq.start(env.master_env.active_master_agent.seqr);
+    #100
+    phase.drop_objection(this);
+    `uvm_info("AHB WRAP TEST","wrap_test_ended",UVM_MEDIUM);
+  endtask : run_phase 
+endclass : wrap_test
